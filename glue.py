@@ -564,7 +564,11 @@ class Sprite(object):
         """Return the namespace for this sprite."""
         if not self.config.namespace:
             return self.name
-        return '%s-%s' % (self.config.namespace, self.name)
+        if self.config.nodirname:
+            return self.config.namespace
+        else:
+            return '%s-%s' % (self.config.namespace, self.name)
+
 
     @property
     def filename(self):
@@ -860,6 +864,10 @@ def main():
                           "area (default: maxside)"), metavar='NAME')
     group.add_option("--namespace", dest="namespace",  default=None,
                       help="namespace for all css classes (default: sprite)")
+    group.add_option("--no-dirname", action="store_true", dest="nodirname",
+                    help="If you don't want the name of the images's source "
+                         "directory in css class name")
+
     group.add_option("--png8", action="store_true", dest="png8",
                       help=("the output image format will be png8 "
                             "instead of png32"))
