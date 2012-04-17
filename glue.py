@@ -273,6 +273,9 @@ class Image(object):
         self.absolute_width = self.width + self.padding[1] + self.padding[3]
         self.absolute_height = self.height + self.padding[0] + self.padding[2]
 
+    def __repr__(self):
+        return repr(self.name)
+
     def _crop_image(self):
         """Crop the image searching for the smallest possible bounding box
         without losing any non-transparent pixel.
@@ -542,22 +545,83 @@ class Sprite(object):
         css_file.write(template % {'all_classes': class_names,
                                    'sprite_url': self.image_url})
 
-        # compile one template for each file
-        for image in self.images:
 
-            x = '%spx' % (image.x * -1 if image.x else 0)
-            y = '%spx' % (image.y * -1 if image.y else 0)
-            height = '%spx' % image.absolute_height
-            width = '%spx' % image.absolute_width
+        # compile one template for each file
+        for i in range(0, len(self.images)):
+
+            x = '%spx' % (self.images[i].x * -1 if self.images[i].x else 0)
+            y = '%spx' % (self.images[i].y * -1 if self.images[i].y else 0)
+            height = '%spx' % self.images[i].absolute_height
+            width = '%spx' % self.images[i].absolute_width
 
             template = self.config.each_template
-            css_file.write(template % {'class_name': '.%s' % image.class_name,
+            css_file.write(template % {'class_name': '.%s' % self.images[i].class_name,
                                        'sprite_url': self.image_url,
                                        'height': height,
                                        'width': width,
                                        'y': y,
                                        'x': x})
+
+        if self.config.htmlOutput:
+            self.output_html(output_path)
         css_file.close()
+
+    def output_html(self, output_path):
+        from operator import itemgetter, attrgetter
+        htmlOutput = ['''<!DOCTYPE html>
+<html style="overflow: auto;">
+<head>
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+    <title>Icons list</title>
+    <link href="../tests_resources/htmloutput/bootstrap.css" rel="stylesheet">
+    <link href="%s.css" rel="stylesheet">
+    <style type="text/css">
+        body { padding: 50px 0;}
+        .the-icons {
+            list-style: none;
+        }
+        li {
+            line-height: 18px;
+            padding: 4px;
+        }
+        i {
+            display: inline-block;
+            vertical-align: text-top;
+        }
+        .darkbg {
+            background-color: #333;
+            color: #fff;
+        }
+        [class$='12'] { margin-right: 6px; }
+        [class$='16'] { margin-right: 2px; }
+    </style>
+</head>
+<body >
+<div class="container">
+    <div class="row">
+            <div class="span4">
+                <ul class="the-icons">''' % self.name]
+
+        self.images.sort(key=attrgetter('name'))
+
+        for i in range(0, len(self.images)):
+            bgcolor = ""
+            if self.images[i].name[0] == 'w':
+                bgcolor = "darkbg"
+
+            htmlOutput.append('    <li class="%s"><i class="%s"></i> %s</li>\n' % (bgcolor, self.images[i].class_name, self.images[i].class_name))
+            if i%(len(self.images)/3) >= (len(self.images) / 3) - 1:
+                htmlOutput.append('    </ul></div>\n')
+                htmlOutput.append('    <div class="span4"><ul class="the-icons">\n')
+
+        htmlOutput.append('</ul></div></div></div>\n</body></html>')
+        destFile = os.path.abspath(output_path + "/" + self.name + ".html")
+        if not os.path.exists(os.path.dirname(destFile)):
+            os.makedirs(os.path.dirname(destFile))
+        with open(destFile, "w") as f:
+            s = ''.join(htmlOutput)
+            f.write(s)
+
 
     @property
     def namespace(self):
@@ -853,6 +917,8 @@ def main():
                     help="output directory for css files", metavar='DIR')
     group.add_option("--img", dest="img_dir", default='', metavar='DIR',
                     help="output directory for img files")
+    group.add_option("--html", action="store_true", dest="htmlOutput",
+                    help="Output an html file listing icones with their names")
     parser.add_option_group(group)
 
     group = OptionGroup(parser, "Advanced Options")
